@@ -1,0 +1,14 @@
+# Build and test output
+[Bb]in/
+[Oo]bj/
+TestResults/
+
+# Visual Studio local files
+.vs/
+*.user
+*.suo
+
+# Local AI instructions, notes, and assignment plan
+/AGENTS.md
+/AI_NOTES.md
+/docs/ASSIGNMENT.md
