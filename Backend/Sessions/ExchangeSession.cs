@@ -1,28 +1,49 @@
-namespace Backend;
+using System.Collections.Generic;
 
-public sealed class ExchangeSession
+namespace Backend
 {
-    public SessionState State { get; private set; } = SessionState.Disconnected;
-
-    public bool TryTransitionTo(SessionState nextState)
+    public sealed class ExchangeSession
     {
-        bool isAllowed = (State, nextState) switch
-        {
-            (SessionState.Disconnected, SessionState.Connecting) => true,
-            (SessionState.Connecting, SessionState.LoggingIn or SessionState.Disconnected) => true,
-            (SessionState.LoggingIn, SessionState.Active or SessionState.Disconnected) => true,
-            (SessionState.Active, SessionState.Suspended or SessionState.LoggingOut) => true,
-            (SessionState.Suspended, SessionState.Active or SessionState.LoggingOut) => true,
-            (SessionState.LoggingOut, SessionState.Disconnected) => true,
-            _ => false
-        };
+        private static readonly HashSet<(SessionState From, SessionState To)>
+            AllowedTransitions = CreateAllowedTransitions();
 
-        if (!isAllowed)
+        public SessionState State { get; private set; } = SessionState.Disconnected;
+
+        public bool TryTransitionTo(SessionState nextState)
         {
-            return false;
+            bool isAllowed = AllowedTransitions.Contains((State, nextState));
+
+            if (!isAllowed)
+            {
+                return false;
+            }
+
+            State = nextState;
+            return true;
         }
 
-        State = nextState;
-        return true;
+        private static HashSet<(SessionState From, SessionState To)>CreateAllowedTransitions()
+        {
+            HashSet<(SessionState From, SessionState To)> transitions =
+                new HashSet<(SessionState From, SessionState To)>();
+
+            transitions.Add((SessionState.Disconnected, SessionState.Connecting));
+
+            transitions.Add((SessionState.Connecting, SessionState.LoggingIn));
+            transitions.Add((SessionState.Connecting, SessionState.Disconnected));
+
+            transitions.Add((SessionState.LoggingIn, SessionState.Active));
+            transitions.Add((SessionState.LoggingIn, SessionState.Disconnected));
+
+            transitions.Add((SessionState.Active, SessionState.Suspended));
+            transitions.Add((SessionState.Active, SessionState.LoggingOut));
+
+            transitions.Add((SessionState.Suspended, SessionState.Active));
+            transitions.Add((SessionState.Suspended, SessionState.LoggingOut));
+
+            transitions.Add((SessionState.LoggingOut, SessionState.Disconnected));
+
+            return transitions;
+        }
     }
 }

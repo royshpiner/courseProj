@@ -57,10 +57,12 @@ A component receives about 1,000 exchange messages per second with increasing se
 
 ### Current progress
 
-- Step 1 is complete in commit `320680e`. `courseProj.sln` contains the `Backend` console app and the `Backend.Tests` xUnit project. Both projects target .NET 11.
-- Step 2 is in progress. `Backend/Sessions/SessionState.cs` defines the six base states. In `Backend/Sessions/ExchangeSession.cs`, each session starts in `Disconnected` with a public getter and private setter. `TryTransitionTo` uses a tuple switch that matches all ten allowed base transitions. It returns `false` before assigning state for an unlisted pair.
-- Latest verification with SDK 11.0.100 passed the build with zero warnings and errors, the existing xUnit entry-point test, and the console startup check.
-- The next milestone task is to add the two Step 2 transition tests. The README design explanation is also pending.
+- Step 1 is complete in commit `320680e`. `courseProj.sln` contains the `Backend` console app and the `Backend.Tests` xUnit project. Both target .NET 11. The installed SDK is 11.0.100.
+- Step 2 has the six base states and all ten allowed transitions. [ExchangeSession](../Backend/Sessions/ExchangeSession.cs) starts in `Disconnected` and checks a `HashSet` of `(From, To)` pairs created by `CreateAllowedTransitions`. `TryTransitionTo` returns `false` and leaves `State` unchanged for an unlisted pair. The transition tests and README design explanation are pending.
+- Step 4 was worked on ahead of Step 3. [Program.cs](../Backend/Program.cs) registers `InMemoryMessageQueue` and `DatqMessageQueue` with dependency injection. `BuildHost` sets up configuration and the service container. `Queue:Type` in [appsettings.json](../Backend/appsettings.json) selects which implementation is returned as `IMessageQueue`. The learner confirmed that both `Sim` and `Datq` printed the matching queue class in manual console runs.
+- Run the console demo with `dotnet run --project Backend` from the solution folder. Pass `-- --Queue:Type=Sim` or `-- --Queue:Type=Datq` to override the JSON value for one run. Set `Queue__Datq__Server` and `Queue__Datq__Password` in PowerShell before running the DATQ simulator.
+- [QueueSelectionTests.cs](../Backend.Tests/QueueSelectionTests.cs) passes `--Queue:Type=Sim` directly to `BuildHost` and checks for an `InMemoryMessageQueue`. `Backend.csproj` gives `Backend.Tests` access to that internal method. The test project includes the new file and the existing entry-point test. A fresh `dotnet test` run for the new test is pending.
+- Next, add the `Disconnected` → `Active` rejection test and check that the state stays `Disconnected`. Then test the allowed `Suspended` → `Active` transition. After the session tests, continue with Step 3 to connect message sending and auditing to the session.
 
 ### Milestones
 
