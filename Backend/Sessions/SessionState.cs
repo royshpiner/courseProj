@@ -7,5 +7,6 @@ public enum SessionState
     LoggingIn,
     Active,
     Suspended,
-    LoggingOut
+    LoggingOut,
+    Reconnecting
 }

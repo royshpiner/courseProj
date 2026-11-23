@@ -4,10 +4,15 @@ namespace Backend
 {
     public sealed class ExchangeSession
     {
-        private static readonly HashSet<(SessionState From, SessionState To)>
-            AllowedTransitions = CreateAllowedTransitions();
+        private static readonly HashSet<(SessionState From, SessionState To)> AllowedTransitions = CreateAllowedTransitions();
 
-        public SessionState State { get; private set; } = SessionState.Disconnected;
+        public SessionState State { get; private set; }
+
+
+        public ExchangeSession()
+        {
+            State = SessionState.Disconnected;
+        }
 
         public bool TryTransitionTo(SessionState nextState)
         {
@@ -24,8 +29,7 @@ namespace Backend
 
         private static HashSet<(SessionState From, SessionState To)>CreateAllowedTransitions()
         {
-            HashSet<(SessionState From, SessionState To)> transitions =
-                new HashSet<(SessionState From, SessionState To)>();
+            HashSet<(SessionState From, SessionState To)> transitions = new HashSet<(SessionState From, SessionState To)>();
 
             transitions.Add((SessionState.Disconnected, SessionState.Connecting));
 
@@ -37,11 +41,18 @@ namespace Backend
 
             transitions.Add((SessionState.Active, SessionState.Suspended));
             transitions.Add((SessionState.Active, SessionState.LoggingOut));
+            transitions.Add((SessionState.Active, SessionState.Reconnecting));
 
             transitions.Add((SessionState.Suspended, SessionState.Active));
             transitions.Add((SessionState.Suspended, SessionState.LoggingOut));
+            transitions.Add((SessionState.Suspended, SessionState.Reconnecting));
+
 
             transitions.Add((SessionState.LoggingOut, SessionState.Disconnected));
+
+
+            transitions.Add((SessionState.Reconnecting, SessionState.LoggingIn));
+            transitions.Add((SessionState.Reconnecting, SessionState.Disconnected));
 
             return transitions;
         }

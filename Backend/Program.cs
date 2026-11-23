@@ -3,6 +3,7 @@ using Backend.Queues;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Backend.Audit;
 
 namespace Backend
 {
@@ -16,6 +17,7 @@ namespace Backend
 
             Console.WriteLine("Backend console app is running.");
         Console.WriteLine($"Selected queue: {queue.GetType().Name}");
+        RunSendDemo(queue);
         }
     }
 
@@ -67,6 +69,25 @@ namespace Backend
             }
 
             return new DatqMessageQueue(server, password);
+        }
+        private static void RunSendDemo(IMessageQueue queue)
+        {
+            ExchangeSession session = new ExchangeSession();
+
+            if (!session.TryTransitionTo(SessionState.Connecting) ||
+                !session.TryTransitionTo(SessionState.LoggingIn) ||
+                !session.TryTransitionTo(SessionState.Active))
+            {
+                throw new InvalidOperationException("The demo session could not become active.");
+            }
+
+            InMemoryAuditLog auditLog = new InMemoryAuditLog();
+            ExchangeMessageSender sender = new ExchangeMessageSender(session, queue, auditLog);
+
+            bool sent = sender.TrySend("Demo message");
+
+            Console.WriteLine($"Sent: {sent}");
+            Console.WriteLine($"Audit entries: {auditLog.Entries.Count}");
         }
     }
 }
