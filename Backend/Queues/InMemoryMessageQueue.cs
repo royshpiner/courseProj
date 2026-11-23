@@ -6,9 +6,15 @@ public sealed class InMemoryMessageQueue : IMessageQueue
 
     public IReadOnlyList<string> Messages => _messages.AsReadOnly();
 
-    public void Send(string message)
+    private readonly HashSet<Guid> _receivedIds = new HashSet<Guid>();
+
+    public void Send(Guid messageId, string message)
     {
         ArgumentNullException.ThrowIfNull(message);
-        _messages.Add(message);
+
+        if (_receivedIds.Add(messageId))
+        {
+            _messages.Add(message);
+        }
     }
 }

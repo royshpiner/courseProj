@@ -1,6 +1,9 @@
 using Backend.Queues;
 using Backend.Audit;
 using Xunit;
+using System.IO;
+using Backend.Persistence;
+using Microsoft.Data.Sqlite;
 
 namespace Backend.Tests
 {
@@ -83,6 +86,59 @@ namespace Backend.Tests
             Assert.True(session.TryTransitionTo(SessionState.Active));
             Assert.Empty(queue.Messages);
             Assert.Empty(auditLog.Entries);
+        }
+
+        [Fact]
+        public void LostQueueConfirmationLeavesMessageUnconfirmed()
+        {
+            string databasePath = Path.GetTempFileName();
+
+            try
+            {
+                ExchangeSession session = new ExchangeSession();
+                Assert.True(session.TryTransitionTo(SessionState.Connecting));
+                Assert.True(session.TryTransitionTo(SessionState.LoggingIn));
+                Assert.True(session.TryTransitionTo(SessionState.Active));
+
+                QueueThatLosesConfirmation queue = new QueueThatLosesConfirmation();
+                InMemoryAuditLog auditLog = new InMemoryAuditLog();
+                SqliteOutbox outbox = new SqliteOutbox(databasePath);
+                ExchangeMessageSender sender =
+                    new ExchangeMessageSender(session, queue, auditLog, outbox);
+
+                string message = "Buy ABC";
+
+                Assert.Throws<InvalidOperationException>(() =>
+                {
+                    sender.TrySend(message);
+                });
+
+                Assert.Equal(message, queue.ReceivedMessage);
+                Assert.Empty(auditLog.Entries);
+
+                SqliteOutbox reopenedOutbox = new SqliteOutbox(databasePath);
+
+                Guid unconfirmedId = Assert.Single(reopenedOutbox.GetUnconfirmedMessageIds());
+                Assert.NotEqual(Guid.Empty, unconfirmedId);
+                Assert.Equal(queue.ReceivedMessageId, unconfirmedId);
+            }
+            finally
+            {
+                File.Delete(databasePath);
+            }
+        }
+
+        private sealed class QueueThatLosesConfirmation : IMessageQueue
+        {
+            public Guid ReceivedMessageId { get; private set; }
+            public string? ReceivedMessage { get; private set; }
+
+            public void Send(Guid messageId, string message)
+            {
+                ReceivedMessageId = messageId;
+                ReceivedMessage = message;
+                throw new InvalidOperationException("Simulated loss of queue confirmation.");
+            }
         }
     }
 

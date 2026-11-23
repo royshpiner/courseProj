@@ -12,11 +12,11 @@ public sealed class DatqMessageQueue : IMessageQueue
         _server = server;
     }
 
-    public void Send(string message)
+    public void Send(Guid messageId, string message)
     {
         ArgumentNullException.ThrowIfNull(message);
 
         Console.WriteLine(
-            $"[DATQ simulation] Sent {message.Length} characters to {_server}.");
+            $"[DATQ simulation] {messageId} Sent {message.Length} characters to {_server}.");
     }
 }

@@ -2,5 +2,5 @@ namespace Backend.Queues;
 
 public interface IMessageQueue
 {
-    void Send(string message);
+    void Send(Guid messageId, string message);
 }

@@ -16,7 +16,7 @@ namespace Backend.Tests
         }
 
         [Fact]
-        public void SuspendedSessionCannotTransitionToActive()
+        public void SuspendedSessionCanTransitionToActive()
         {
             ExchangeSession session = new ExchangeSession();
 

@@ -44,6 +44,7 @@ A bank's Foundation layer sends messages to a queue consumed by its core system.
 - Use a **Console app or Worker Service** and put the separate xUnit test project in the same solution.
 - `dotnet build` and `dotnet test` must pass on a clean machine.
 - Document how to run the project, how to switch queues, and any unfinished work or things you would do differently. Include the code review, the state design rationale, the abstract-class/interface answer, the `Reconnecting` change count and rationale, and the `Suspended` send behavior and trade-off.
+- Submit a GitHub repository link with access or a ZIP. Include the code, the test project, `README.md`, `ANSWERS.md` for Part B, `AI_NOTES.md`, and the approximate hours spent.
 
 ## Reliability discussion prompts (page 3)
 
@@ -72,6 +73,11 @@ A component receives about 1,000 exchange messages per second with increasing se
 - Step 5 implementation and tests are in place. `SessionState` has `Reconnecting`, and `ExchangeSession` includes all four new transition pairs. The learner reported passing tests for `Active` → `Reconnecting` and the blocked `Reconnecting` → `Active` transition.
 - Step 6 uses immediate rejection while `Suspended`. `TrySend` returns `false`. The queue and audit log stay empty, including after the session resumes. The caller must retry explicitly. The learner reported that `SuspendedSessionRejectsSend` passed, bringing the suite to nine tests.
 - [README.md](../README.md) has the run instructions, queue settings, session design, `Reconnecting` change count, suspended-send trade-off, interface versus abstract class explanation, `ChannelManager` review, and reliability answers. The learner verified both console modes and confirmed the final `dotnet build` and `dotnet test` passed locally with nine tests.
+- Crash recovery extension is implemented. [SqliteOutbox](../Backend/Persistance/SqliteOutbox.cs) saves the message ID and payload before sending. `SentUtc` is empty until the send is confirmed. [SqliteMessageQueue](../Backend/Queues/SqliteMessageQueue.cs) stores the accepted payload and UTC receipt time in a separate database. A retry with the same ID and payload reuses that receipt.
+- Select `DurableSim` to try recovery on startup. Once the session is `Active`, the sender retries unconfirmed messages with their original IDs. New and recovered sends use the same audit path. When recovery confirms an outbox row, it records one in-memory audit entry with the receiver's original receipt time and prints the audit count. The outbox retains durable confirmation data. `Sim` and `Datq` report any unconfirmed IDs for manual review. The SQLite files are local to each computer. `Storage:Directory` can override the default app-data folder.
+- [SendRecoveryTests](../Backend.Tests/SendRecoveryTests.cs) verifies both restart scenarios. A pending message with no receipt is delivered, and a pending message with an existing receipt is confirmed with that receipt's timestamp. Each case ends with one receipt and one confirmed outbox row. The recovery audit test checks receipt times, message lengths, sequence order, and that a second recovery pass adds no entries. Tests also verify manual review for `Sim` and `Datq` and the outbox payload and receipt reads.
+- [ANSWERS.md](../ANSWERS.md) contains the three Part B answers in Hebrew. The learner's approximate hours and AI use notes still need to be filled in for submission.
+- Independent review verified all 49 state pairs, send behavior in all seven states, and configuration-file startup for all three queues. A fresh source copy built and tested with cached NuGet packages. NuGet could not reach its vulnerability feed during that run. After fixing recovery audit, `dotnet build` completed with zero warnings and errors and all 19 tests passed. The next optional practice step is an operator workflow for resolving unconfirmed `Sim` and `Datq` sends.
 
 ### Milestones
 
